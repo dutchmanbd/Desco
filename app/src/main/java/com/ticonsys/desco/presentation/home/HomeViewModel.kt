@@ -5,6 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.ticonsys.desco.util.SharedPref
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 @HiltViewModel
@@ -16,22 +20,36 @@ class HomeViewModel @Inject constructor(
         private const val PREF_ACCOUNT_NUMBER = "pref_account_number"
     }
 
-    private val _hasSubmitted = mutableStateOf(false)
-    val hasSubmitted: State<Boolean>
-        get() = _hasSubmitted
+    private val _uiState = MutableStateFlow(
+        HomeUiState(
+        )
+    )
+    val uiState: StateFlow<HomeUiState>
+        get() = _uiState.asStateFlow()
 
-    private val _accountNumber = mutableStateOf(sharedPref.read(PREF_ACCOUNT_NUMBER, ""))
-    val accountNumber: State<String>
-        get() = _accountNumber
 
+    init {
+        val accountNumber = sharedPref.read(PREF_ACCOUNT_NUMBER, "")
+        _uiState.update { state ->
+            state.copy(
+                accountNumber = accountNumber,
+                isSubmitted = accountNumber.isNotEmpty()
+            )
+        }
+    }
 
     fun updateAccountNumber(accountNumber: String) {
-        _accountNumber.value = accountNumber
+        _uiState.update { state ->
+            state.copy(
+                accountNumber = accountNumber
+            )
+        }
     }
 
-    fun submit(hasSubmit: Boolean) {
-        sharedPref.write(PREF_ACCOUNT_NUMBER, _accountNumber.value)
-        _hasSubmitted.value = hasSubmit
+    fun saveAccountNumber() {
+        sharedPref.write(PREF_ACCOUNT_NUMBER, uiState.value.accountNumber)
+        _uiState.update { state -> state.copy(isSubmitted = true) }
     }
+
 
 }
